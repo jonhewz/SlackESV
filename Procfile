@@ -1,1 +1,1 @@
-web: java -jar target/SlackESV.jar
+web: java -jar target/SlackESV-0.0.1.jar
