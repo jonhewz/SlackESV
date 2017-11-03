@@ -50,10 +50,10 @@ public class SlackRelayConfig {
         return esvKey;
     }
 
-    @Value("http://www.esvapi.org/v2/rest/")
+    @Value("https://api.esv.org")
     private String esvBaseUrl;
 
-    @Value("passageQuery")
+    @Value("/v3/passage/text/")
     private String esvPassageQueryPath;
 
     @Value("")
