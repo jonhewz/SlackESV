@@ -69,7 +69,7 @@ public class SlackCommandController {
                            @RequestParam("text") String text) {
 
         // Perform basic authentication
-        ResponseEntity<SlackResponse> authResponse = authenticateRequest(teamId);
+        ResponseEntity<SlackResponse> authResponse = authenticateRequest(token);
         if (authResponse != null) {
             return authResponse;
         }
@@ -113,28 +113,31 @@ public class SlackCommandController {
     }
 
     /**
-     * Helper method to abstract out authentication details.
-     * @param teamId
+     * Helper method to abstract out authentication details. When you set up a Slack integration, Slack
+     * creates a Token. Per their documentation: "This token will be sent in the outgoing payload. You can use it to
+     * verify the request came from your Slack team."
+     * Token rotation (for now) is a manual process, and would require regeneration of Slack token, followed by
+     * restart of SlackESV with the new token specified as an application parameter.
+     * @param token
      * @return
      */
-    private ResponseEntity<SlackResponse> authenticateRequest(String teamId) {
+    private ResponseEntity<SlackResponse> authenticateRequest(String token) {
         ResponseEntity<SlackResponse> responseEntity = null;
 
-        // Authenticate based on Slack TeamId. This can be expanded to allow multiple teamIds or to
-        // authenticate on any of the other pieces of data sent by Slack. But for now, simple.
+        // Authenticate based on Slack Token.
         try {
-            String authorizedSlackTeamId = context.getBean("authorizedSlackTeamId", String.class);
+            String authorizedSlackToken = context.getBean("authorizedSlackToken", String.class);
 
-            // Server error - need to pass the allowed slack teamId into the application at startup
-            if (authorizedSlackTeamId == null) {
+            // Server error - need to define the slack token as an environment variable. (see SlackRelayConfig.java)
+            if (authorizedSlackToken == null) {
                 return new ResponseEntity<SlackResponse>(
                         SlackResponse.createPrivate("Authorization misconfiguration"),
                         HttpStatus.INTERNAL_SERVER_ERROR);
 
-                // Client error - teamId mismatch
-            } else if (!authorizedSlackTeamId.equalsIgnoreCase(teamId)) {
+                // Client error - token mismatch
+            } else if (!authorizedSlackToken.equalsIgnoreCase(token)) {
                 return new ResponseEntity<SlackResponse>(
-                        SlackResponse.createPrivate("Authorization denied for provided teamId"),
+                        SlackResponse.createPrivate("Authorization denied for provided token"),
                         HttpStatus.UNAUTHORIZED);
             }
 

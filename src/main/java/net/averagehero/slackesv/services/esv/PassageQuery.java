@@ -56,12 +56,11 @@ public class PassageQuery implements SlackRelayService {
 
         String body;
         try {
-            //String url = getBaseUrl() + getPath() + "?key=" + context.getBean("esvKey") + convertParams(getParams()) +
-            String url = getBaseUrl() + getPath() + "?" + convertParams(getParams()) +
-                    "&q=" + userText;
+            String url = getBaseUrl() + getPath() + "?" + convertParams(getParams()) + "&q=" + userText;
 
             logger.debug("Issuing ESV API GET Request to: " + url);
 
+            // The ESV developer key goes in the header of every request
             Request request = new Request.Builder()
                     .url(url)
                     .header("Authorization", "Token " + context.getBean("esvKey"))

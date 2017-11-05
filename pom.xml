@@ -9,6 +9,8 @@
 
     <properties>
         <java.version>1.8</java.version>
+        <!-- finalName must be the same as what is specified in Procfile -->
+        <jar.finalName>${project.name}</jar.finalName>
     </properties>
 
     <!-- Inherit defaults from Spring Boot -->

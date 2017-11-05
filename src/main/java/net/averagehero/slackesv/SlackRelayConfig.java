@@ -30,19 +30,22 @@ public class SlackRelayConfig {
         return crlf;
     }
 
-    // Not any slack team can connect up. Specify the single team allowed as
-    // a jvm arg. i.e. --slack.team.id=abc123
-    @Value("#{ systemProperties['slack.team.id'] ?: 'TEST' }")
-    private String authorizedSlackTeamId;
+    // There are two configs that come into the application via environment variables:
+    // 1) slack.token - this is unique to a slack team, and is used to authenticate requests and
+    //                  make sure they are coming from an approved team.
+    // 2) esv.key - Crossway provides a developer key for you to use when making requests against their REST api.
 
-    @Bean(name="authorizedSlackTeamId")
-    public String getAuthorizedSlackTeamId() {
-        return authorizedSlackTeamId;
+    // Default to TEST, used for spock tests
+    @Value("${slack.token:TEST}")
+    private String authorizedSlackToken;
+
+    @Bean(name="authorizedSlackToken")
+    public String getAuthorizedSlackToken() {
+        return authorizedSlackToken;
     }
 
-    // ESV API will need a developer key to be passed along with requests. Specify
-    // as a jvm arg. i.e. --esv.key=abc123
-    @Value("#{ systemProperties['esv.key'] ?: 'IP' }")
+    // Default to TEST
+    @Value("${esv.key:TEST")
     private String esvKey;
 
     @Bean(name="esvKey")

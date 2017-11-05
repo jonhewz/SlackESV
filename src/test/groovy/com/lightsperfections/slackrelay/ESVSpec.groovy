@@ -69,8 +69,8 @@ public class ESVSpec extends Specification {
         setup:
         def client = new RESTClient( "http://localhost:$port/" )
         client.handler.failure = client.handler.success
-        def paramMap = [token: 'TEST',
-                        team_id: 'sultans of swing',
+        def paramMap = [token: 'sultans of swing',
+                        team_id: 'teamId',
                         team_domain: 'teamDomain',
                         channel_id: 'channelId',
                         channel_name: 'channelName',
