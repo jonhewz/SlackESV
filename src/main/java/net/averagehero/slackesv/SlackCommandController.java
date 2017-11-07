@@ -1,5 +1,6 @@
 package net.averagehero.slackesv;
 
+import com.sun.net.httpserver.Authenticator;
 import net.averagehero.slackesv.beans.SlackResponse;
 import net.averagehero.slackesv.services.DependentServiceException;
 import net.averagehero.slackesv.services.InternalImplementationException;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.net.URI;
 
 
 /**
@@ -110,6 +113,23 @@ public class SlackCommandController {
         }
 
         return runService(service, userName, text);
+    }
+
+    /**
+     * Health check. Currently just used as a keepalive for uptimerobot.com, this can be expanded to include
+     * an actual assessment of the application's vitals.
+     *
+     * @param echo Comes right back.
+     * @return
+     */
+    @RequestMapping(value = "/health", method = RequestMethod.GET)
+    public ResponseEntity<String> health(
+            @RequestParam(value = "echo", required = false) String echo) {
+        if (echo != null && echo.length() > 0) {
+            return new ResponseEntity(echo, HttpStatus.OK);
+        } else {
+            return new ResponseEntity(HttpStatus.OK);
+        }
     }
 
     /**
