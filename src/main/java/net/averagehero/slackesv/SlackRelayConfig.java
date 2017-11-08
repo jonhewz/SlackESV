@@ -45,7 +45,7 @@ public class SlackRelayConfig {
     }
 
     // Default to TEST
-    @Value("${esv.key:TEST")
+    @Value("${esv.key:TEST}")
     private String esvKey;
 
     @Bean(name="esvKey")
