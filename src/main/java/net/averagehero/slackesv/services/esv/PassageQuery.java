@@ -2,6 +2,7 @@ package net.averagehero.slackesv.services.esv;
 
 import com.google.gson.Gson;
 import net.averagehero.slackesv.SlackRelayConfig;
+import net.averagehero.slackesv.beans.ESVError;
 import net.averagehero.slackesv.beans.ESVPassage;
 import net.averagehero.slackesv.services.DependentServiceException;
 import net.averagehero.slackesv.services.InternalImplementationException;
@@ -57,7 +58,7 @@ public class PassageQuery implements SlackRelayService {
                 new AnnotationConfigApplicationContext(SlackRelayConfig.class);
 
         String body;
-        ESVPassage esvPassage;
+        Object esvResponse;
         try {
             String url = getBaseUrl() + getPath() + "?" + convertParams(getParams()) + "&q=" + userText;
 
@@ -69,13 +70,26 @@ public class PassageQuery implements SlackRelayService {
                     .header("Authorization", "Token " + context.getBean("esvKey"))
                     .build();
 
+            long start = System.currentTimeMillis();
             Response response = client.newCall(request).execute();
+            logger.debug("ESV Request: " + (System.currentTimeMillis() - start) + " ms.");
+
             body = response.body().string();
+            Gson gson = new Gson();
+            if (response.isSuccessful()) {
+                esvResponse = gson.fromJson(body, ESVPassage.class);
+            } else {
+                esvResponse = gson.fromJson(body, ESVError.class);
+                logger.error(esvResponse.toString());
+
+                // Do not just pass the error along to Slack. We have no control over what it is, and
+                // don't want to blindly send those to end users. Could be things like: reached daily limit,
+                // or developer key not authorized.
+                return("Error with api.esv.org exchange. Please check server logs for details.");
+            }
 
             //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
 
-            Gson gson = new Gson();
-            esvPassage = gson.fromJson(body, ESVPassage.class);
 
         } catch (IOException e) {
             throw new DependentServiceException("Error issuing request to ESV API");
@@ -84,7 +98,7 @@ public class PassageQuery implements SlackRelayService {
             throw new InternalImplementationException("Error with ESV service configuration");
         }
 
-        return esvPassage.toString();
+        return esvResponse.toString();
     }
 
     public String getName() {

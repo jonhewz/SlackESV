@@ -77,6 +77,7 @@ public class ESVPassage {
     @Override
     public String toString() {
         String rv = "";
+        // TODO: This NPEs for error responses. Need to parse out errors and deal appropriately, in addition to NPE check.
         for (String passage : getPassages()) {
             rv += passage + "\n";
         }
