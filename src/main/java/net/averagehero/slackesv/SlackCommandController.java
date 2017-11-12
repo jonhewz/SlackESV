@@ -1,6 +1,5 @@
 package net.averagehero.slackesv;
 
-import com.sun.net.httpserver.Authenticator;
 import net.averagehero.slackesv.beans.SlackResponse;
 import net.averagehero.slackesv.services.DependentServiceException;
 import net.averagehero.slackesv.services.InternalImplementationException;
@@ -15,8 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.net.URI;
 
 
 /**
@@ -39,7 +36,7 @@ public class SlackCommandController {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private AnnotationConfigApplicationContext context =
-            new AnnotationConfigApplicationContext(SlackRelayConfig.class);
+            new AnnotationConfigApplicationContext(SlackESVConfig.class);
 
     /**
      * This is the generic endpoint for all ESV activity. The ESV api supports many actions: passageQuery,
@@ -148,7 +145,7 @@ public class SlackCommandController {
         try {
             String authorizedSlackToken = context.getBean("authorizedSlackToken", String.class);
 
-            // Server error - need to define the slack token as an environment variable. (see SlackRelayConfig.java)
+            // Server error - need to define the slack token as an environment variable. (see SlackESVConfig.java)
             if (authorizedSlackToken == null) {
                 return new ResponseEntity<SlackResponse>(
                         SlackResponse.createPrivate("Authorization misconfiguration"),

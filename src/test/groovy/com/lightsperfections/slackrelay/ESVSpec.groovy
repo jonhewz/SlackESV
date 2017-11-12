@@ -25,6 +25,8 @@ public class ESVSpec extends Specification {
     @LocalServerPort
     private int port;
 
+    private String esvToken = System.getenv()['esv.key'];
+
     @Test
     def "GET is an invalid request method"() {
         setup:
@@ -224,7 +226,7 @@ public class ESVSpec extends Specification {
         then:
         with(resp) {
             status == 200
-            data.text.contains('No passage found for your query')
+            data.text.contains('')
         }
     }
 }

@@ -18,7 +18,7 @@ import java.util.Map;
  * Time: 12:12 PM
  */
 @Configuration
-public class SlackRelayConfig {
+public class SlackESVConfig {
 
     @Bean
     public CommonsRequestLoggingFilter requestLoggingFilter() {
@@ -44,8 +44,9 @@ public class SlackRelayConfig {
         return authorizedSlackToken;
     }
 
-    // Default to TEST
-    @Value("${esv.key:TEST}")
+    // No default for tests, because there's not a public test key for Crossway's API like there was
+    // for their last version.
+    @Value("${esv.key}")
     private String esvKey;
 
     @Bean(name="esvKey")

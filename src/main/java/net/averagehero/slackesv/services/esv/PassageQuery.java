@@ -1,7 +1,7 @@
 package net.averagehero.slackesv.services.esv;
 
 import com.google.gson.Gson;
-import net.averagehero.slackesv.SlackRelayConfig;
+import net.averagehero.slackesv.SlackESVConfig;
 import net.averagehero.slackesv.beans.ESVError;
 import net.averagehero.slackesv.beans.ESVPassage;
 import net.averagehero.slackesv.services.DependentServiceException;
@@ -55,7 +55,7 @@ public class PassageQuery implements SlackRelayService {
             throws DependentServiceException, InternalImplementationException {
 
         AnnotationConfigApplicationContext context =
-                new AnnotationConfigApplicationContext(SlackRelayConfig.class);
+                new AnnotationConfigApplicationContext(SlackESVConfig.class);
 
         String body;
         Object esvResponse;
