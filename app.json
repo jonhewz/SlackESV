@@ -4,4 +4,13 @@
   "repository": "https://github.com/jonhewz/SlackESV",
   "logo": "https://www.esv.org/static/img/logo.svg",
   "keywords": ["slack", "slash", "bible", "esv"]
+  "env": {
+    "esv.key": {
+      "description":
+        "Obtain this access key from https://api.esv.org/account/. Will need to go through approval process."
+    },
+    "slack.token": {
+      "description": "The Slack-generated token for your slash command."
+    }
+  }
 }
