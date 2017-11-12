@@ -1,0 +1,7 @@
+{
+  "name": "SlackESV",
+  "description": "Use /esv commands in Slack to fetch English Standard Version Bible verses.",
+  "repository": "https://github.com/jonhewz/SlackESV",
+  "logo": "https://www.esv.org/static/img/logo.svg",
+  "keywords": ["slack", "slash", "bible", "esv"]
+}
