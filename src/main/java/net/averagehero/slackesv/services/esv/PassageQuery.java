@@ -25,7 +25,7 @@ import java.util.Map;
  * Time: 3:27 PM
  */
 public class PassageQuery implements SlackRelayService {
-    Logger logger = LoggerFactory.getLogger("SlackCommandController");
+    Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final String name;
     private final String baseUrl;

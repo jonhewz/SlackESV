@@ -36,7 +36,7 @@ import java.net.URI;
 
 @RestController
 public class SlackCommandController {
-    private Logger logger = LoggerFactory.getLogger("SlackCommandController");
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private AnnotationConfigApplicationContext context =
             new AnnotationConfigApplicationContext(SlackRelayConfig.class);
