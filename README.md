@@ -20,7 +20,7 @@ will require manual approval from their staff. This key is what will be used to 
 You should also be aware of their [conditions of usage](https://api.esv.org/#conditions).
 2) Set up your slash command for your Slack organization. Go to 
 https://YOUR-ORG.slack.com/apps/manage/custom-integrations, and click on `Slash Commands`.
-[\<view\>](https://raw.githubusercontent.com/jonhewz/SlackESV/master/markdown/images/slack-add-configuration)
+[\<view\>](https://raw.githubusercontent.com/jonhewz/SlackESV/master/markdown/images/slack-add-configuration.png)
 Be aware that the URL field will need to be changed once you get a url from Heroku. Also make note of the
 generated Token field, which will be used in the next step.
 [\<view\>](https://raw.githubusercontent.com/jonhewz/SlackESV/master/markdown/images/slack-integration-settings.png)
