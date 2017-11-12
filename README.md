@@ -8,4 +8,4 @@ then make a GET request to api.esv.org to get the desired text, and return it ba
 This can be expanded in the future to support more of ESV's functionality, such as queries, reading plans, and daily
 verses. 
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://api.esv.org/account/slackesv)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
