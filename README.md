@@ -18,28 +18,29 @@ it is tested primarily with Heroku, and is quite easy to get running on Heroku b
 1) Obtain an application key from [api.esv.org](https://api.esv.org/account/create-application/), which
 will require manual approval from their staff. This key is what will be used to identify *your* requests.
 You should also be aware of their [conditions of usage](https://api.esv.org/#conditions).
-![alt text](https://github.com/jonhewz/SlackESV/markdown/images/create-esv-application.png "create-esv-application")
+![alt text](https://github.com/jonhewz/SlackESV/blob/master/markdown/images/create-esv-application.png "create-esv-application")
 2) Set up your slash command for your Slack organization. Go to 
 https://YOUR-ORG.slack.com/apps/manage/custom-integrations, and click on `Slash Commands`.
-![alt text](https://github.com/jonhewz/SlackESV/markdown/images/slack-add-configuration.png "slack-add-configuration")
+![alt text](https://github.com/jonhewz/SlackESV/blob/master/markdown/images/slack-add-configuration.png "slack-add-configuration")
 Be aware that the URL field will need to be changed once you get a url from Heroku. Also make note of the
 generated Token field, which will be used in the next step.
-![alt text](https://github.com/jonhewz/SlackESV/markdown/images/slack-integration-settings.png "slack-integration-settings")
+![alt text](https://github.com/jonhewz/SlackESV/blob/master/markdown/images/slack-integration-settings.png "slack-integration-settings")
 Set an icon if you wish, as well as the autocomplete.
-![alt text](https://github.com/jonhewz/SlackESV/markdown/images/slack-autocomplete.png "slack-complete")
+![alt text](https://github.com/jonhewz/SlackESV/blob/master/markdown/images/slack-autocomplete.png "slack-complete")
 3) Use this button to launch a heroku instance
+
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
-![alt text](https://github.com/jonhewz/SlackESV/markdown/images/heroku-launch.png "heroku-launch")
+![alt text](https://github.com/jonhewz/SlackESV/blob/master/markdown/images/heroku-launch.png "heroku-launch")
 Use your ESV application key that you obtained in step #1, and the slack token you obtained in #2, 
 to launch the instance.
 4) Find the domain of your newly launched application on the Settings page for your app.
-![alt text](https://github.com/jonhewz/SlackESV/markdown/images/heroku-domain.png "heroku-domain")
+![alt text](https://github.com/jonhewz/SlackESV/blob/master/markdown/images/heroku-domain.png "heroku-domain")
 Go back to your Slack slash command configuration and set the URL field with your heroku app's domain.
 5) Heroku free dynos fall asleep after an hour of idle time. The wake-up time is a big deal, and will 
 result in Slack timeouts the first request after an idle period of time. You can use any sort of 
 service to keep your dyno alive. I had success with [UptimeRobot](https://uptimerobot.com). You can create 
 a monitor with your Heroku URL, followed by /health?echo=whateverYouWant. It is a good idea to also set 
 up an email notification, so that if there are problems with your service you'll be notified.
-![alt text](https://github.com/jonhewz/SlackESV/markdown/images/uptime-robot.png "uptime-robot")
+![alt text](https://github.com/jonhewz/SlackESV/blob/master/markdown/images/uptime-robot.png "uptime-robot")
 
 That's it! You should be good to go!
