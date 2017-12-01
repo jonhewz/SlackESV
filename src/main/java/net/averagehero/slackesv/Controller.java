@@ -1,9 +1,12 @@
 package net.averagehero.slackesv;
 
+import com.google.gson.Gson;
+import net.averagehero.slackesv.beans.ESVError;
+import net.averagehero.slackesv.beans.ESVPassage;
 import net.averagehero.slackesv.beans.SlackResponse;
-import net.averagehero.slackesv.services.DependentServiceException;
-import net.averagehero.slackesv.services.InternalImplementationException;
-import net.averagehero.slackesv.services.SlackRelayService;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -15,35 +18,20 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-
 /**
- * SlackCommandController is intended to be called by Slack slash commands, as documented here:
- * https://api.slack.com/slash-commands
- *
- * It is intended to be a fairly thin wrapper around whatever back-end services the Slack user wishes
- * to interface with.
- *
- * Each endpoint should be defined as a POST, since this is Slack's favored method. Each endpoint should
- * also require each of the params, since they are guaranteed to be sent by Slack and therefore can
- * be used to (lightly) authenticate clients.
- *
- * The text param contains variable text provided by the user. It is the only provided data that should
- * be relayed to the back-end service.
+ * Handle requests to this application at defined endpoints.
  */
-
 @RestController
-public class SlackCommandController {
+public class Controller {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private AnnotationConfigApplicationContext context =
-            new AnnotationConfigApplicationContext(SlackESVConfig.class);
+            new AnnotationConfigApplicationContext(Config.class);
+
+    private final OkHttpClient client = new OkHttpClient();
 
     /**
-     * This is the generic endpoint for all ESV activity. The ESV api supports many actions: passageQuery,
-     * query, readingPlanQuery, queryInfo, readingPlanInfo, verse, dailyVerse.
-     *
-     * The text param can contain an optional action, and this can be extended to support as many actions
-     * as are desired. If no action is provided it will default to a passageLookup
+     * Requests are for ESV Bible passages.
      *
      * @param token
      * @param teamId
@@ -74,42 +62,64 @@ public class SlackCommandController {
             return authResponse;
         }
 
-        // Parse out optional subcommand. In the example "/esv passageQuery Matthew 5:14", "esv" is
-        // the command, "passageQuery" is the subcommand, and "Matthew 5:14" is what should be passed
-        // into the service.
-        //
-        // However, assuming that passageQuery is the service marked PRIMARY, the user could just
-        // specify "/esv Matthew 5:14" and it should return the results of a passageQuery.
-
-        // Try to find a more specific service
-        SlackRelayService service;
-        text = text.trim().toLowerCase();
-        String[] tokens = text.split("\\s+");
-
-        // If no parameters are provided, fall back to HELP
-        if (tokens.length == 1 && "".equals(tokens[0])) {
-            service = context.getBean("esv.help", SlackRelayService.class);
-        } else {
-            int firstParamIndex = 1;
-
-            // If the first param is not a valid subcommand assume passageQuery
-            if (!context.isBeanNameInUse("esv." + tokens[0])) {
-                service = context.getBean("esv.passagequery", SlackRelayService.class);
-                firstParamIndex = 0;
-
-            // The first param is a valid command - use that service and pass the rest of the params in
-            } else {
-                service = context.getBean("esv." + tokens[0], SlackRelayService.class);
-            }
-
-            // Reconstitute the tokens back into the text field (minus subcommand), and proceed
-            text = "";
-            for (int i = firstParamIndex; i < tokens.length; i++) {
-                text += tokens[i] + (i < tokens.length - 1 ? " " : "");
-            }
+        // Check for valid input
+        if (text.isEmpty() ||
+            text.startsWith("help") ||
+            text.startsWith("-h") ||
+            text.startsWith("--help")) {
+            return new ResponseEntity<SlackResponse>(SlackResponse.createPrivate(
+                    "ESV Help\n" +
+                    "--------\n" +
+                    "Perform a passage lookup:\n" +
+                    "/esv prov 31:1-5\n" +
+                    "/esv JOH 1\n"),
+                    HttpStatus.OK);
         }
 
-        return runService(service, userName, text);
+        // Send the text along to the ESV API
+        String body;
+        Object esvResponse;
+        try {
+            String esvURL = esvURL = context.getBean("esvURL", String.class) + text;
+            logger.debug("Issuing ESV API GET Request to: " + esvURL);
+
+            // The ESV developer key goes in the header of every request
+            Request request = new Request.Builder()
+                    .url(esvURL)
+                    .header("Authorization", "Token " + context.getBean("esvKey"))
+                    .build();
+
+            long start = System.currentTimeMillis();
+            Response response = client.newCall(request).execute();
+            logger.debug("ESV Request: " + (System.currentTimeMillis() - start) + " ms.");
+
+            body = response.body().string();
+            Gson gson = new Gson();
+            if (response.isSuccessful()) {
+                esvResponse = gson.fromJson(body, ESVPassage.class);
+            } else {
+                esvResponse = gson.fromJson(body, ESVError.class);
+                logger.error(esvResponse.toString());
+
+                // Do not just pass the error along to Slack. We have no control over what it is, and
+                // don't want to blindly send those to end users. Could be things like: reached daily limit,
+                // or developer key not authorized.
+                throw new Exception("Error with api.esv.org exchange. Please check server logs for details.");
+            }
+
+            //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
+
+        } catch (NoSuchBeanDefinitionException e) {
+            return new ResponseEntity<SlackResponse>(
+                    SlackResponse.createPrivate("Error with ESV service configuration"),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            return new ResponseEntity<SlackResponse>(
+                    SlackResponse.createPrivate("Error issuing request to ESV API"),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+
+        }
+        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(esvResponse.toString()), HttpStatus.OK);
     }
 
     /**
@@ -145,7 +155,7 @@ public class SlackCommandController {
         try {
             String authorizedSlackToken = context.getBean("authorizedSlackToken", String.class);
 
-            // Server error - need to define the slack token as an environment variable. (see SlackESVConfig.java)
+            // Server error - need to define the slack token as an environment variable. (see Config.java)
             if (authorizedSlackToken == null) {
                 return new ResponseEntity<SlackResponse>(
                         SlackResponse.createPrivate("Authorization misconfiguration"),
@@ -166,36 +176,5 @@ public class SlackCommandController {
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
-    }
-
-    /**
-     * Helper method to abstract out the logic of Exception handling.
-     * @param service
-     * @param text
-     * @return
-     */
-    private ResponseEntity<SlackResponse> runService(SlackRelayService service, String userName, String text) {
-
-        // The relayed request can fail because the dependent service is having problems, or because _this_
-        // application has bugs. Trying to be helpful in diagnosing the problem.
-        String responseText;
-        try {
-            responseText = service.performAction(userName, text);
-        } catch (DependentServiceException e) {
-            return new ResponseEntity<SlackResponse> (
-                    SlackResponse.createPrivate(service.getName() + " failed."),
-                    HttpStatus.BAD_GATEWAY);
-
-        } catch (InternalImplementationException e) {
-            return new ResponseEntity<SlackResponse> (
-                    SlackResponse.createPublic("Internal error trying to proxy request to " + service.getName() + "."),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-
-        }
-
-        return new ResponseEntity<SlackResponse> (
-                SlackResponse.createPublic(responseText),
-                HttpStatus.OK);
-
     }
 }

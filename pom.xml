@@ -5,7 +5,7 @@
 
     <groupId>net.averagehero</groupId>
     <artifactId>SlackESV</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 
     <properties>
         <java.version>1.8</java.version>
@@ -38,25 +38,25 @@
             <version>1.0.0.m3</version>
         </dependency>
 
-        <!-- https://square.github.io/okhttp/2.x/okhttp/index.html -->
+        <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
         <dependency>
-            <groupId>com.squareup.okhttp</groupId>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.8.2</version>
+        </dependency>
+
+        <!-- http://square.github.io/okhttp/3.x/okhttp/ -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>2.7.0</version>
+            <version>3.9.0</version>
         </dependency>
 
-        <!-- http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/AboutJava.html -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk</artifactId>
-            <version>1.10.43</version>
-        </dependency>
-
-        <!-- http://docs.groovy-lang.org/docs/groovy-2.4.5/html/documentation/ -->
+        <!-- http://docs.groovy-lang.org/latest/html/api/ -->
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
-            <version>2.4.4</version>
+            <version>2.4.12</version>
             <scope>test</scope>
         </dependency>
 
@@ -64,7 +64,7 @@
         <dependency>
             <groupId>org.spockframework</groupId>
             <artifactId>spock-core</artifactId>
-            <version>1.0-groovy-2.4</version>
+            <version>1.1-groovy-2.4</version>
             <scope>test</scope>
         </dependency>
 
@@ -74,13 +74,6 @@
             <artifactId>http-builder</artifactId>
             <version>0.7.1</version>
             <scope>test</scope>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.8.2</version>
         </dependency>
 
     </dependencies>
@@ -101,15 +94,23 @@
             <plugin>
                 <groupId>org.codehaus.gmavenplus</groupId>
                 <artifactId>gmavenplus-plugin</artifactId>
-                <version>1.4</version>
+                <version>1.6</version>
                 <executions>
                     <execution>
                         <goals>
-                            <goal>compile</goal>
-                            <goal>testCompile</goal>
+                            <goal>compileTests</goal>
                         </goals>
                     </execution>
                 </executions>
+                <dependencies>
+                    <!-- http://docs.groovy-lang.org/latest/html/api/ -->
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-all</artifactId>
+                        <version>2.4.12</version>
+                        <scope>runtime</scope>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <!-- Spec classes need to be identified here as test -->

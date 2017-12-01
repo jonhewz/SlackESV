@@ -3,10 +3,6 @@ package net.averagehero.slackesv.beans;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Created with IntelliJ IDEA.
- * User: jhughes
- * Date: 12/24/15
- * Time: 9:30 AM
  */
 public class SlackResponse {
     private final String responseType;
