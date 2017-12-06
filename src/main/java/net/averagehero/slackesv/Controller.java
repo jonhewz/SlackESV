@@ -4,9 +4,7 @@ import com.google.gson.Gson;
 import net.averagehero.slackesv.beans.ESVError;
 import net.averagehero.slackesv.beans.ESVPassage;
 import net.averagehero.slackesv.beans.SlackResponse;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -17,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
+import java.net.URLEncoder;
 
 /**
  * Handle requests to this application at defined endpoints.
@@ -29,6 +30,8 @@ public class Controller {
             new AnnotationConfigApplicationContext(Config.class);
 
     private final OkHttpClient client = new OkHttpClient();
+    public static final MediaType JSON
+            = MediaType.parse("application/json; charset=utf-8");
 
     /**
      * Requests are for ESV Bible passages.
@@ -49,12 +52,16 @@ public class Controller {
                            @RequestParam("token") String token,
                            @RequestParam("team_id") String teamId,
                            @RequestParam("team_domain") String teamDomain,
+                           @RequestParam("enterprise_id") String enterpriseId,
+                           @RequestParam("enterprise_name") String enterpriseName,
                            @RequestParam("channel_id") String channelId,
                            @RequestParam("channel_name") String channelName,
                            @RequestParam("user_id") String userId,
                            @RequestParam("user_name") String userName,
                            @RequestParam("command") String command,
-                           @RequestParam("text") String text) {
+                           @RequestParam("text") String text,
+                           @RequestParam("response_url") String responseUrl,
+                           @RequestParam("trigger_id") String triggerId) {
 
         // Perform basic authentication
         ResponseEntity<SlackResponse> authResponse = authenticateRequest(token);
@@ -76,50 +83,74 @@ public class Controller {
                     HttpStatus.OK);
         }
 
-        // Send the text along to the ESV API
-        String body;
-        Object esvResponse;
-        try {
-            String esvURL = esvURL = context.getBean("esvURL", String.class) + text;
-            logger.debug("Issuing ESV API GET Request to: " + esvURL);
+        // There's no guarantee that api.esv will return within Slack's timeout. Better to let a
+        // thread do the work and post back to Slack's response_url, as described here:
+        // https://api.slack.com/slash-commands#delayed_responses_and_multiple_responses
+        new Thread(() -> {
 
-            // The ESV developer key goes in the header of every request
-            Request request = new Request.Builder()
-                    .url(esvURL)
-                    .header("Authorization", "Token " + context.getBean("esvKey"))
-                    .build();
+            // Send the text along to the ESV API
+            String body;
+            Object esvMessage;
+            SlackResponse slackResponse;
+            try {
+                String esvURL = esvURL = context.getBean("esvURL", String.class) +
+                        URLEncoder.encode(text, "UTF-8");
 
-            long start = System.currentTimeMillis();
-            Response response = client.newCall(request).execute();
-            logger.debug("ESV Request: " + (System.currentTimeMillis() - start) + " ms.");
+                logger.debug("Issuing ESV API GET Request to: " + esvURL);
 
-            body = response.body().string();
-            Gson gson = new Gson();
-            if (response.isSuccessful()) {
-                esvResponse = gson.fromJson(body, ESVPassage.class);
-            } else {
-                esvResponse = gson.fromJson(body, ESVError.class);
-                logger.error(esvResponse.toString());
+                // The ESV developer key goes in the header of every request
+                Request esvRequest = new Request.Builder()
+                        .url(esvURL)
+                        .header("Authorization", "Token " + context.getBean("esvKey"))
+                        .build();
 
-                // Do not just pass the error along to Slack. We have no control over what it is, and
-                // don't want to blindly send those to end users. Could be things like: reached daily limit,
-                // or developer key not authorized.
-                throw new Exception("Error with api.esv.org exchange. Please check server logs for details.");
+                long start = System.currentTimeMillis();
+                Response esvResponse = client.newCall(esvRequest).execute();
+                logger.debug("ESV Request: " + (System.currentTimeMillis() - start) + " ms.");
+
+                //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
+                body = esvResponse.body().string();
+                Gson gson = new Gson();
+                if (esvResponse.isSuccessful()) {
+                    esvMessage = gson.fromJson(body, ESVPassage.class);
+                } else {
+                    esvMessage = gson.fromJson(body, ESVError.class);
+                    logger.error(esvResponse.toString());
+
+                    // Do not just pass the error along to Slack. We have no control over what it is, and
+                    // don't want to blindly send those to end users. Could be things like: reached daily limit,
+                    // or developer key not authorized.
+                    throw new Exception("Error with api.esv.org exchange. Please check server logs for details.");
+                }
+
+                slackResponse = SlackResponse.createPublic(esvMessage.toString());
+
+            } catch (NoSuchBeanDefinitionException e) {
+                slackResponse = SlackResponse.createPrivate("Error with SlackESV configuration");
+            } catch (Exception e) {
+                slackResponse = SlackResponse.createPrivate("Error issuing request to ESV API");
             }
 
-            //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
+            // Send the response back to Slack
+            RequestBody slackBody = RequestBody.create(JSON, slackResponse.toString());
+            Request slackRequest = new Request.Builder()
+                    .url(responseUrl)
+                    .post(slackBody)
+                    .build();
+            try {
+                Response response = client.newCall(slackRequest).execute();
+                if (!response.isSuccessful()) {
+                    logger.error("Error posting back to slack: " + response.message());
+                }
+            } catch (IOException e) {
+                logger.error(e.toString());
+            }
 
-        } catch (NoSuchBeanDefinitionException e) {
-            return new ResponseEntity<SlackResponse>(
-                    SlackResponse.createPrivate("Error with ESV service configuration"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            return new ResponseEntity<SlackResponse>(
-                    SlackResponse.createPrivate("Error issuing request to ESV API"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
 
-        }
-        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(esvResponse.toString()), HttpStatus.OK);
+        }).start();
+
+
+        return new ResponseEntity<SlackResponse>(SlackResponse.createPrivate(""), HttpStatus.OK);
     }
 
     /**
