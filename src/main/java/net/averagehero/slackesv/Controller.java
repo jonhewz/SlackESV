@@ -63,6 +63,21 @@ public class Controller {
                            @RequestParam("response_url") String responseUrl,
                            @RequestParam("trigger_id") String triggerId) {
 
+        logger.debug("/esv request: token=" + token +
+                "&team_id=" + teamId +
+                "&team_domain=" + teamDomain +
+                "&enterprise_id=" + enterpriseId +
+                "&enterprise_name=" + enterpriseName +
+                "&channel_id=" + channelId +
+                "&channel_name=" + channelName +
+                "&user_id=" + userId +
+                "&user_name=" + userName +
+                "&command=" + command +
+                "&text=" + text +
+                "&response_url=" + responseUrl +
+                "&trigger_id=" + triggerId
+        );
+
         // Perform basic authentication
         ResponseEntity<SlackResponse> authResponse = authenticateRequest(token);
         if (authResponse != null) {
@@ -146,9 +161,11 @@ public class Controller {
                 logger.error(e.toString());
             }
 
+            logger.debug("spawn thread returning");
 
         }).start();
 
+        logger.debug("main thread returning");
 
         return new ResponseEntity<SlackResponse>(SlackResponse.createPrivate(""), HttpStatus.OK);
     }
@@ -163,6 +180,9 @@ public class Controller {
     @RequestMapping(value = "/health", method = RequestMethod.GET)
     public ResponseEntity<String> health(
             @RequestParam(value = "echo", required = false) String echo) {
+
+        logger.debug("/esv request: echo=" + echo);
+
         if (echo != null && echo.length() > 0) {
             return new ResponseEntity(echo, HttpStatus.OK);
         } else {
