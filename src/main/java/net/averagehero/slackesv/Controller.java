@@ -101,7 +101,6 @@ public class Controller {
         // There's no guarantee that api.esv will return within Slack's timeout. Better to let a
         // thread do the work and post back to Slack's response_url, as described here:
         // https://api.slack.com/slash-commands#delayed_responses_and_multiple_responses
-        /*
           new Thread(() -> {
 
             // Send the text along to the ESV API
@@ -165,11 +164,10 @@ public class Controller {
             logger.debug("spawn thread returning");
 
         }).start();
-        */
 
         logger.debug("main thread returning");
 
-        return new ResponseEntity<SlackResponse>(SlackResponse.createPrivate(""), HttpStatus.OK);
+        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(""), HttpStatus.OK);
     }
 
     /**
