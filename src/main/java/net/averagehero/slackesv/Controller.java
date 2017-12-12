@@ -154,6 +154,7 @@ public class Controller {
                     .build();
             try {
                 Response response = client.newCall(slackRequest).execute();
+                logger.debug(response.toString());
                 if (!response.isSuccessful()) {
                     logger.error("Error posting back to slack: " + response.message());
                 }
