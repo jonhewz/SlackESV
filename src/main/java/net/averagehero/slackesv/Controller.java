@@ -61,6 +61,7 @@ public class Controller {
                            @RequestParam("command") String command,
                            @RequestParam("text") String text,
                            @RequestParam("response_url") String responseUrl,
+                           @RequestParam("blah") String blah,
                            @RequestParam("trigger_id") String triggerId) {
 
         logger.debug("/esv request: token=" + token +
