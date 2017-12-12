@@ -86,22 +86,24 @@ public class Controller {
 
         // Check for valid input
         if (text.isEmpty() ||
-            text.startsWith("help") ||
-            text.startsWith("-h") ||
-            text.startsWith("--help")) {
+                text.startsWith("help") ||
+                text.startsWith("-h") ||
+                text.startsWith("--help")) {
             return new ResponseEntity<SlackResponse>(SlackResponse.createPrivate(
                     "ESV Help\n" +
-                    "--------\n" +
-                    "Perform a passage lookup:\n" +
-                    "/esv prov 31:1-5\n" +
-                    "/esv JOH 1\n"),
+                            "--------\n" +
+                            "Perform a passage lookup:\n" +
+                            "/esv prov 31:1-5\n" +
+                            "/esv JOH 1\n"),
                     HttpStatus.OK);
         }
 
         // There's no guarantee that api.esv will return within Slack's timeout. Better to let a
         // thread do the work and post back to Slack's response_url, as described here:
         // https://api.slack.com/slash-commands#delayed_responses_and_multiple_responses
-          new Thread(() -> {
+        new Thread(() -> {
+
+            Gson gson = new Gson();
 
             // Send the text along to the ESV API
             String body;
@@ -125,7 +127,6 @@ public class Controller {
 
                 //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
                 body = esvResponse.body().string();
-                Gson gson = new Gson();
                 if (esvResponse.isSuccessful()) {
                     esvMessage = gson.fromJson(body, ESVPassage.class);
                 } else {
@@ -147,7 +148,8 @@ public class Controller {
             }
 
             // Send the response back to Slack
-            RequestBody slackBody = RequestBody.create(JSON, slackResponse.toString());
+            logger.debug("Posting to Slack: " + gson.toJson(slackResponse).toString());
+            RequestBody slackBody = RequestBody.create(JSON, gson.toJson(slackResponse));
             Request slackRequest = new Request.Builder()
                     .url(responseUrl)
                     .post(slackBody)
@@ -197,6 +199,7 @@ public class Controller {
      * verify the request came from your Slack team."
      * Token rotation (for now) is a manual process, and would require regeneration of Slack token, followed by
      * restart of SlackESV with the new token specified as an application parameter.
+     *
      * @param token
      * @return
      */
