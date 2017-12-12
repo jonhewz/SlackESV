@@ -109,6 +109,7 @@ public class Controller {
             String body;
             Object esvMessage;
             SlackResponse slackResponse;
+
             try {
                 String esvURL = esvURL = context.getBean("esvURL", String.class) +
                         URLEncoder.encode(text, "UTF-8");
@@ -122,21 +123,24 @@ public class Controller {
                         .build();
 
                 long start = System.currentTimeMillis();
-                Response esvResponse = client.newCall(esvRequest).execute();
-                logger.debug("ESV Request: " + (System.currentTimeMillis() - start) + " ms.");
+                try (Response esvResponse = client.newCall(esvRequest).execute()) {
+                    logger.debug("ESV Request: " + (System.currentTimeMillis() - start) + " ms.");
 
-                //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
-                body = esvResponse.body().string();
-                if (esvResponse.isSuccessful()) {
-                    esvMessage = gson.fromJson(body, ESVPassage.class);
-                } else {
-                    esvMessage = gson.fromJson(body, ESVError.class);
-                    logger.error(esvResponse.toString());
+                    esvResponse.close();
 
-                    // Do not just pass the error along to Slack. We have no control over what it is, and
-                    // don't want to blindly send those to end users. Could be things like: reached daily limit,
-                    // or developer key not authorized.
-                    throw new Exception("Error with api.esv.org exchange. Please check server logs for details.");
+                    //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
+                    body = esvResponse.body().string();
+                    if (esvResponse.isSuccessful()) {
+                        esvMessage = gson.fromJson(body, ESVPassage.class);
+                    } else {
+                        esvMessage = gson.fromJson(body, ESVError.class);
+                        logger.error(esvResponse.toString());
+
+                        // Do not just pass the error along to Slack. We have no control over what it is, and
+                        // don't want to blindly send those to end users. Could be things like: reached daily limit,
+                        // or developer key not authorized.
+                        throw new Exception("Error with api.esv.org exchange. Please check server logs for details.");
+                    }
                 }
 
                 slackResponse = SlackResponse.createPublic(esvMessage.toString());
@@ -154,8 +158,7 @@ public class Controller {
                     .url(responseUrl)
                     .post(slackBody)
                     .build();
-            try {
-                Response response = client.newCall(slackRequest).execute();
+            try (Response response = client.newCall(slackRequest).execute()) {
                 logger.debug(response.toString());
                 if (!response.isSuccessful()) {
                     logger.error("Error posting back to slack: " + response.message());
@@ -170,7 +173,7 @@ public class Controller {
 
         logger.debug("main thread returning");
 
-        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(""), HttpStatus.OK);
+        return new ResponseEntity<SlackResponse>(SlackResponse.createPrivate(""), HttpStatus.OK);
     }
 
     /**
