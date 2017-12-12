@@ -33,40 +33,6 @@ public class Controller {
     public static final MediaType JSON
             = MediaType.parse("application/json; charset=utf-8");
 
-
-    @RequestMapping(value = "/blah", method = RequestMethod.GET)
-    public ResponseEntity<SlackResponse> blah(
-            @RequestParam("token") String token,
-            @RequestParam("team_id") String teamId,
-            @RequestParam("team_domain") String teamDomain,
-            @RequestParam("enterprise_id") String enterpriseId,
-            @RequestParam("enterprise_name") String enterpriseName,
-            @RequestParam("channel_id") String channelId,
-            @RequestParam("channel_name") String channelName,
-            @RequestParam("user_id") String userId,
-            @RequestParam("user_name") String userName,
-            @RequestParam("command") String command,
-            @RequestParam("text") String text,
-            @RequestParam("response_url") String responseUrl,
-            @RequestParam("trigger_id") String triggerId) {
-
-        logger.debug("/esv request: token=" + token +
-                "&team_id=" + teamId +
-                "&team_domain=" + teamDomain +
-                "&enterprise_id=" + enterpriseId +
-                "&enterprise_name=" + enterpriseName +
-                "&channel_id=" + channelId +
-                "&channel_name=" + channelName +
-                "&user_id=" + userId +
-                "&user_name=" + userName +
-                "&command=" + command +
-                "&text=" + text +
-                "&response_url=" + responseUrl +
-                "&trigger_id=" + triggerId
-        );
-
-        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(""), HttpStatus.OK);
-    }
     /**
      * Requests are for ESV Bible passages.
      *
@@ -83,19 +49,19 @@ public class Controller {
      */
     @RequestMapping(value = "/esv", method = RequestMethod.POST)
     public ResponseEntity<SlackResponse> esv(
-                           @RequestParam("token") String token,
-                           @RequestParam("team_id") String teamId,
-                           @RequestParam("team_domain") String teamDomain,
-                           @RequestParam("enterprise_id") String enterpriseId,
-                           @RequestParam("enterprise_name") String enterpriseName,
-                           @RequestParam("channel_id") String channelId,
-                           @RequestParam("channel_name") String channelName,
-                           @RequestParam("user_id") String userId,
-                           @RequestParam("user_name") String userName,
-                           @RequestParam("command") String command,
-                           @RequestParam("text") String text,
-                           @RequestParam("response_url") String responseUrl,
-                           @RequestParam("trigger_id") String triggerId) {
+            @RequestParam("token") String token,
+            @RequestParam(value = "team_id", required = false) String teamId,
+            @RequestParam(value = "team_domain", required = false) String teamDomain,
+            @RequestParam(value = "enterprise_id", required = false) String enterpriseId,
+            @RequestParam(value = "enterprise_name", required = false) String enterpriseName,
+            @RequestParam(value = "channel_id", required = false) String channelId,
+            @RequestParam(value = "channel_name", required = false) String channelName,
+            @RequestParam(value = "user_id", required = false) String userId,
+            @RequestParam(value = "user_name", required = false) String userName,
+            @RequestParam(value = "command") String command,
+            @RequestParam(value = "text", required = false) String text,
+            @RequestParam("response_url") String responseUrl,
+            @RequestParam(value = "trigger_id", required = false) String triggerId) {
 
         logger.debug("/esv request: token=" + token +
                 "&team_id=" + teamId +
