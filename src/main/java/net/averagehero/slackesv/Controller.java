@@ -33,6 +33,40 @@ public class Controller {
     public static final MediaType JSON
             = MediaType.parse("application/json; charset=utf-8");
 
+
+    @RequestMapping(value = "/blah", method = RequestMethod.GET)
+    public ResponseEntity<SlackResponse> blah(
+            @RequestParam("token") String token,
+            @RequestParam("team_id") String teamId,
+            @RequestParam("team_domain") String teamDomain,
+            @RequestParam("enterprise_id") String enterpriseId,
+            @RequestParam("enterprise_name") String enterpriseName,
+            @RequestParam("channel_id") String channelId,
+            @RequestParam("channel_name") String channelName,
+            @RequestParam("user_id") String userId,
+            @RequestParam("user_name") String userName,
+            @RequestParam("command") String command,
+            @RequestParam("text") String text,
+            @RequestParam("response_url") String responseUrl,
+            @RequestParam("trigger_id") String triggerId) {
+
+        logger.debug("/esv request: token=" + token +
+                "&team_id=" + teamId +
+                "&team_domain=" + teamDomain +
+                "&enterprise_id=" + enterpriseId +
+                "&enterprise_name=" + enterpriseName +
+                "&channel_id=" + channelId +
+                "&channel_name=" + channelName +
+                "&user_id=" + userId +
+                "&user_name=" + userName +
+                "&command=" + command +
+                "&text=" + text +
+                "&response_url=" + responseUrl +
+                "&trigger_id=" + triggerId
+        );
+
+        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(""), HttpStatus.OK);
+    }
     /**
      * Requests are for ESV Bible passages.
      *
@@ -61,7 +95,6 @@ public class Controller {
                            @RequestParam("command") String command,
                            @RequestParam("text") String text,
                            @RequestParam("response_url") String responseUrl,
-                           @RequestParam("blah") String blah,
                            @RequestParam("trigger_id") String triggerId) {
 
         logger.debug("/esv request: token=" + token +
