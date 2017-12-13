@@ -1,10 +1,12 @@
 package net.averagehero.slackesv.beans;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+
+import com.google.gson.annotations.SerializedName;
 
 /**
  */
 public class SlackResponse {
+    @SerializedName("response_type")
     private final String responseType;
     private final String text;
     // TODO: Extend to include attachment support
@@ -24,7 +26,6 @@ public class SlackResponse {
         return new SlackResponse("in_channel", text);
     }
 
-    @JsonProperty("response_type")
     public String getResponseType() {
         return responseType;
     }
