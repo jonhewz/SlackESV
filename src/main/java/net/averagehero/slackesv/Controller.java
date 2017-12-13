@@ -171,7 +171,7 @@ public class Controller {
 
         logger.debug("main thread returning");
 
-        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(""), HttpStatus.OK);
+        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic("_one moment..._"), HttpStatus.OK);
     }
 
     /**
