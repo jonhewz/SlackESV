@@ -1,9 +1,12 @@
 package net.averagehero.slackesv;
 
 import com.google.gson.Gson;
-import net.averagehero.slackesv.beans.ESVError;
-import net.averagehero.slackesv.beans.ESVPassage;
-import net.averagehero.slackesv.beans.SlackResponse;
+import net.averagehero.slackesv.beans.esv.Error;
+import net.averagehero.slackesv.beans.esv.Query;
+import net.averagehero.slackesv.beans.slack.Attachment;
+import net.averagehero.slackesv.beans.slack.AttachmentResponse;
+import net.averagehero.slackesv.beans.slack.SlackResponse;
+import net.averagehero.slackesv.beans.slack.TextResponse;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +51,7 @@ public class Controller {
      * @return
      */
     @RequestMapping(value = "/esv", method = RequestMethod.POST)
-    public ResponseEntity<SlackResponse> esv(
+    public ResponseEntity<? extends SlackResponse> esv(
             @RequestParam("token") String token,
             @RequestParam(value = "team_id", required = false) String teamId,
             @RequestParam(value = "team_domain", required = false) String teamDomain,
@@ -59,7 +62,7 @@ public class Controller {
             @RequestParam(value = "user_id", required = false) String userId,
             @RequestParam(value = "user_name", required = false) String userName,
             @RequestParam(value = "command") String command,
-            @RequestParam(value = "text", required = false) String text,
+            @RequestParam("text") String text,
             @RequestParam("response_url") String responseUrl,
             @RequestParam(value = "trigger_id", required = false) String triggerId) {
 
@@ -79,9 +82,9 @@ public class Controller {
         );
 
         // Perform basic authentication
-        ResponseEntity<SlackResponse> authResponse = authenticateRequest(token);
-        if (authResponse != null) {
-            return authResponse;
+        ResponseEntity<TextResponse> errorResponse = authenticateRequest(token);
+        if (errorResponse != null) {
+            return errorResponse;
         }
 
         // Check for valid input
@@ -89,7 +92,7 @@ public class Controller {
                 text.startsWith("help") ||
                 text.startsWith("-h") ||
                 text.startsWith("--help")) {
-            return new ResponseEntity<SlackResponse>(SlackResponse.createPrivate(
+            return new ResponseEntity<TextResponse>(TextResponse.createPrivate(
                     "ESV Help\n" +
                             "--------\n" +
                             "Perform a passage lookup:\n" +
@@ -107,7 +110,6 @@ public class Controller {
 
             // Send the text along to the ESV API
             String body;
-            Object esvMessage;
             SlackResponse slackResponse;
 
             try {
@@ -123,15 +125,31 @@ public class Controller {
                         .build();
 
                 long start = System.currentTimeMillis();
-                try (Response esvResponse = client.newCall(esvRequest).execute()) {
+                try (okhttp3.Response esvResponse = client.newCall(esvRequest).execute()) {
                     logger.debug("ESV Request: " + (System.currentTimeMillis() - start) + " ms.");
 
                     //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
                     body = esvResponse.body().string();
                     if (esvResponse.isSuccessful()) {
-                        esvMessage = gson.fromJson(body, ESVPassage.class);
+                        Query esvQuery = gson.fromJson(body, Query.class);
+
+                        String passagesText = "";
+                        for (String passage : esvQuery.getPassages()) {
+                            passagesText += passage;
+                        }
+                        Attachment attachment = Attachment.create()
+                                .setColor("#36a64f")
+                                .setFallback(esvQuery.getCanonical() + " | " + passagesText)
+                                .setText(passagesText)
+                                .setTitle(esvQuery.getCanonical())
+                                // TODO: Fix this hard-coded monstrosity.
+                                .setTitleLink("https://www.esv.org/" +
+                                        URLEncoder.encode(esvQuery.getCanonical(), "UTF-8") + "/");
+
+                        slackResponse = AttachmentResponse.createPublic(attachment);
+
                     } else {
-                        esvMessage = gson.fromJson(body, ESVError.class);
+                        Error esvMessage = gson.fromJson(body, Error.class);
                         logger.error(esvResponse.toString());
 
                         // Do not just pass the error along to Slack. We have no control over what it is, and
@@ -141,22 +159,23 @@ public class Controller {
                     }
                 }
 
-                slackResponse = SlackResponse.createPublic(esvMessage.toString());
+
 
             } catch (NoSuchBeanDefinitionException e) {
-                slackResponse = SlackResponse.createPrivate("Error with SlackESV configuration");
+                slackResponse = TextResponse.createPrivate("Error with SlackESV configuration");
             } catch (Exception e) {
-                slackResponse = SlackResponse.createPrivate("Error issuing request to ESV API");
+                slackResponse = TextResponse.createPrivate(e.getMessage());
             }
 
             // Send the response back to Slack
+            // https://api.slack.com/methods/chat.postMessage
             logger.debug("Posting to Slack: " + gson.toJson(slackResponse).toString());
             RequestBody slackBody = RequestBody.create(JSON, gson.toJson(slackResponse));
             Request slackRequest = new Request.Builder()
                     .url(responseUrl)
                     .post(slackBody)
                     .build();
-            try (Response response = client.newCall(slackRequest).execute()) {
+            try (okhttp3.Response response = client.newCall(slackRequest).execute()) {
                 logger.debug(response.toString());
                 if (!response.isSuccessful()) {
                     logger.error("Error posting back to slack: " + response.message());
@@ -171,7 +190,7 @@ public class Controller {
 
         logger.debug("main thread returning");
 
-        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic("_one moment..._"), HttpStatus.OK);
+        return new ResponseEntity<SlackResponse>(SlackResponse.createPublic(), HttpStatus.OK);
     }
 
     /**
@@ -204,8 +223,8 @@ public class Controller {
      * @param token
      * @return
      */
-    private ResponseEntity<SlackResponse> authenticateRequest(String token) {
-        ResponseEntity<SlackResponse> responseEntity = null;
+    private ResponseEntity<TextResponse> authenticateRequest(String token) {
+        ResponseEntity<TextResponse> responseEntity = null;
 
         // Authenticate based on Slack Token.
         try {
@@ -213,22 +232,22 @@ public class Controller {
 
             // Server error - need to define the slack token as an environment variable. (see Config.java)
             if (authorizedSlackToken == null) {
-                return new ResponseEntity<SlackResponse>(
-                        SlackResponse.createPrivate("Authorization misconfiguration"),
+                return new ResponseEntity<TextResponse>(
+                        TextResponse.createPrivate("Authorization misconfiguration"),
                         HttpStatus.INTERNAL_SERVER_ERROR);
 
-                // Client error - token mismatch
-            } else if (!authorizedSlackToken.equalsIgnoreCase(token)) {
-                return new ResponseEntity<SlackResponse>(
-                        SlackResponse.createPrivate("Authorization denied for provided token"),
+            // Client error - token mismatch
+            } else if (!authorizedSlackToken.equals(token)) {
+                return new ResponseEntity<TextResponse>(
+                        TextResponse.createPrivate("Authorization denied for provided token"),
                         HttpStatus.UNAUTHORIZED);
             }
 
             // Else - good to go, carry on.
 
         } catch (NoSuchBeanDefinitionException e) {
-            return new ResponseEntity<SlackResponse>(
-                    SlackResponse.createPrivate("Authorization unconfigured"),
+            return new ResponseEntity<TextResponse>(
+                    TextResponse.createPrivate("Authorization unconfigured"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
