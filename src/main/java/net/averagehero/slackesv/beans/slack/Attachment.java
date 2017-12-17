@@ -15,6 +15,8 @@ import com.google.gson.annotations.SerializedName;
  */
 public class Attachment {
 
+    private String color;
+
     private String fallback;
 
     private String text;
@@ -22,6 +24,15 @@ public class Attachment {
     private String footer;
 
     private Attachment() {}
+
+    public String getColor() {
+        return color;
+    }
+
+    public Attachment setColor(String color) {
+        this.color = color;
+        return this;
+    }
 
     public String getFallback() {
         return fallback;

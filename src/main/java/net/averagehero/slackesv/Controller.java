@@ -138,6 +138,7 @@ public class Controller {
                             passagesText += passage;
                         }
                         Attachment attachment = Attachment.create()
+                                .setColor("good")
                                 .setFallback(esvQuery.getCanonical() + " | " + passagesText)
                                 .setText(passagesText)
                                 // TODO: Fix this hard-coded monstrosity.
