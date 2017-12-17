@@ -138,12 +138,10 @@ public class Controller {
                             passagesText += passage;
                         }
                         Attachment attachment = Attachment.create()
-                                .setColor("#36a64f")
                                 .setFallback(esvQuery.getCanonical() + " | " + passagesText)
                                 .setText(passagesText)
-                                .setTitle(esvQuery.getCanonical())
                                 // TODO: Fix this hard-coded monstrosity.
-                                .setTitleLink("https://www.esv.org/" +
+                                .setFooter("https://www.esv.org/" +
                                         URLEncoder.encode(esvQuery.getCanonical(), "UTF-8") + "/");
 
                         slackResponse = AttachmentResponse.createPublic(attachment);
