@@ -1,4 +1,4 @@
-package com.lightsperfections.slackrelay
+package net.averagehero.slackrelay
 
 import groovyx.net.http.RESTClient
 import net.averagehero.slackesv.Application
@@ -25,15 +25,13 @@ public class ESVSpec extends Specification {
     @LocalServerPort
     private int port;
 
-    private String esvToken = System.getenv()['esv.key'];
-
     @Test
     def "GET is an invalid request method"() {
         setup:
-        def client = new RESTClient( "http://localhost:$port/" )
+        def client = new RESTClient("http://localhost:$port/")
         client.handler.failure = client.handler.success
         when:
-        def resp = client.get([ path: 'esv', query : [ input: 'phil' ]])
+        def resp = client.get([path: 'esv', query: [input: 'phil']])
         then:
         with(resp) {
             status == 405
@@ -41,19 +39,14 @@ public class ESVSpec extends Specification {
     }
 
     @Test
-    def "POST with all params returns success"() {
+    def "POST with all required params returns success"() {
         setup:
-        def client = new RESTClient( "http://localhost:$port/" )
+        def client = new RESTClient("http://localhost:$port/")
         client.handler.failure = client.handler.success
-        def paramMap = [token: 'TEST',
-                        team_id: 'TEST',
-                        team_domain: 'teamDomain',
-                        channel_id: 'channelId',
-                        channel_name: 'channelName',
-                        user_id: 'userId',
-                        user_name: 'userName',
-                        command: 'command',
-                        text: 'text']
+        def paramMap = [token       : 'TEST',
+                        text        : 'text',
+                        response_url: 'http://localhost']
+
         when:
         def resp = client.post(
                 path: 'esv',
@@ -69,17 +62,12 @@ public class ESVSpec extends Specification {
     @Test
     def "Invalid token returns unauthorized"() {
         setup:
-        def client = new RESTClient( "http://localhost:$port/" )
+        def client = new RESTClient("http://localhost:$port/")
         client.handler.failure = client.handler.success
-        def paramMap = [token: 'sultans of swing',
-                        team_id: 'teamId',
-                        team_domain: 'teamDomain',
-                        channel_id: 'channelId',
-                        channel_name: 'channelName',
-                        user_id: 'userId',
-                        user_name: 'userName',
-                        command: 'command',
-                        text: 'text']
+        def paramMap = [token       : 'INVALIDTOKEN',
+                        text        : 'text',
+                        response_url: 'http://localhost']
+
         when:
         def resp = client.post(
                 path: 'esv',
@@ -95,22 +83,16 @@ public class ESVSpec extends Specification {
     @Test
     def "POST with missing param returns 400"() {
         setup:
-        def partialParamMap = [team_id: 'TEST',
-                               team_domain: 'teamDomain',
-                               channel_id: 'channelId',
-                               channel_name: 'channelName',
-                               user_id: 'userId',
-                               user_name: 'userName',
-                               command: 'command',
-                               text: 'text']
+        def paramMap = [token  : 'TEST',
+                        text   : 'text']
 
-        def client = new RESTClient( "http://localhost:$port/" )
+        def client = new RESTClient("http://localhost:$port/")
         client.handler.failure = client.handler.success
         when:
         def resp = client.post(
                 path: 'esv',
                 requestContentType: URLENC,
-                body: partialParamMap
+                body: paramMap
         )
         then:
         with(resp) {
@@ -118,115 +100,26 @@ public class ESVSpec extends Specification {
         }
     }
 
-    @Test
-    def "ESV passageQuery case-insensitivity" () {
-        setup:
-        def partialParamMap = [token: 'TEST',
-                               team_id: 'TEST',
-                               team_domain: 'teamDomain',
-                               channel_id: 'channelId',
-                               channel_name: 'channelName',
-                               user_id: 'userId',
-                               user_name: 'userName',
-                               command: 'command',
-                               text: 'PASSAGEQUERY 1 thessalonians 5:21' ]
 
-        def client = new RESTClient( "http://localhost:$port/" )
+    @Test
+    def "ESV with no params defaults to HELP"() {
+        setup:
+        def paramMap = [token       : 'TEST',
+                        text        : ' ',
+                        response_url: 'http://localhost']
+
+        def client = new RESTClient("http://localhost:$port/")
         client.handler.failure = client.handler.success
         when:
         def resp = client.post(
                 path: 'esv',
-                body: partialParamMap,
-                requestContentType:URLENC
-        )
-        then:
-        with(resp) {
-            status == 200
-            data.text.contains('test everything; hold fast')
-        }
-    }
-
-    @Test
-    def "ESV passageQuery default to passagequery" () {
-        setup:
-        def partialParamMap = [token: 'TEST',
-                               team_id: 'TEST',
-                               team_domain: 'teamDomain',
-                               channel_id: 'channelId',
-                               channel_name: 'channelName',
-                               user_id: 'userId',
-                               user_name: 'userName',
-                               command: 'command',
-                               text: ' 1 thessalonians 5:21  ' ]
-
-        def client = new RESTClient( "http://localhost:$port/" )
-        client.handler.failure = client.handler.success
-        when:
-        def resp = client.post(
-                path: 'esv',
-                body: partialParamMap,
-                requestContentType:URLENC
-        )
-        then:
-        with(resp) {
-            status == 200
-            data.text.contains('test everything')
-        }
-    }
-
-    @Test
-    def "ESV with no params defaults to HELP" () {
-        setup:
-        def partialParamMap = [token: 'TEST',
-                               team_id: 'TEST',
-                               team_domain: 'teamDomain',
-                               channel_id: 'channelId',
-                               channel_name: 'channelName',
-                               user_id: 'userId',
-                               user_name: 'userName',
-                               command: 'command',
-                               text: ' ' ]
-
-        def client = new RESTClient( "http://localhost:$port/" )
-        client.handler.failure = client.handler.success
-        when:
-        def resp = client.post(
-                path: 'esv',
-                body: partialParamMap,
-                requestContentType:URLENC
+                body: paramMap,
+                requestContentType: URLENC
         )
         then:
         with(resp) {
             status == 200
             data.text.contains('ESV Help')
-        }
-    }
-
-    @Test
-    def "ESV with invalid reference " () {
-        setup:
-        def partialParamMap = [token: 'TEST',
-                               team_id: 'TEST',
-                               team_domain: 'teamDomain',
-                               channel_id: 'channelId',
-                               channel_name: 'channelName',
-                               user_id: 'userId',
-                               user_name: 'userName',
-                               command: 'command',
-                               text: 'enoch 1 ' ]
-
-        def client = new RESTClient( "http://localhost:$port/" )
-        client.handler.failure = client.handler.success
-        when:
-        def resp = client.post(
-                path: 'esv',
-                body: partialParamMap,
-                requestContentType:URLENC
-        )
-        then:
-        with(resp) {
-            status == 200
-            data.text.contains('')
         }
     }
 }

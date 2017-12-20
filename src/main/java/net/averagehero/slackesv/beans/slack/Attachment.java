@@ -1,7 +1,5 @@
 package net.averagehero.slackesv.beans.slack;
 
-import com.google.gson.annotations.SerializedName;
-
 /**
  *
  * Example request JSON:

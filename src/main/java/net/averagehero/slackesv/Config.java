@@ -59,10 +59,18 @@ public class Config {
         "include-content-type=true&" +
         "line-length=0&" +
         "q=")
-    private String esvURL;
+    private String esvApiLink;
 
-    @Bean(name="esvURL")
-    public String getEsvURL() {
-        return esvURL;
+    @Bean(name="esvApiLink")
+    public String getEsvApiLink() {
+        return esvApiLink;
+    }
+
+    @Value("https://esvbible.org/")
+    private String esvWebLink;
+
+    @Bean(name="esvWebLink")
+    public String getEsvWebLink() {
+        return esvWebLink;
     }
 }

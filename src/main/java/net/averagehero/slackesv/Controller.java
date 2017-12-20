@@ -1,6 +1,7 @@
 package net.averagehero.slackesv;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import net.averagehero.slackesv.beans.esv.Error;
 import net.averagehero.slackesv.beans.esv.Query;
 import net.averagehero.slackesv.beans.slack.Attachment;
@@ -61,7 +62,7 @@ public class Controller {
             @RequestParam(value = "channel_name", required = false) String channelName,
             @RequestParam(value = "user_id", required = false) String userId,
             @RequestParam(value = "user_name", required = false) String userName,
-            @RequestParam(value = "command") String command,
+            @RequestParam(value = "command", required = false) String command,
             @RequestParam("text") String text,
             @RequestParam("response_url") String responseUrl,
             @RequestParam(value = "trigger_id", required = false) String triggerId) {
@@ -88,7 +89,7 @@ public class Controller {
         }
 
         // Check for valid input
-        if (text.isEmpty() ||
+        if (text.trim().isEmpty() ||
                 text.startsWith("help") ||
                 text.startsWith("-h") ||
                 text.startsWith("--help")) {
@@ -106,21 +107,20 @@ public class Controller {
         // https://api.slack.com/slash-commands#delayed_responses_and_multiple_responses
         new Thread(() -> {
 
-            Gson gson = new Gson();
+            ObjectMapper objectMapper = new ObjectMapper();
 
             // Send the text along to the ESV API
             String body;
             SlackResponse slackResponse;
-
             try {
-                String esvURL = esvURL = context.getBean("esvURL", String.class) +
+                String esvApiLink = context.getBean("esvApiLink", String.class) +
                         URLEncoder.encode(text, "UTF-8");
 
-                logger.debug("Issuing ESV API GET Request to: " + esvURL);
+                logger.debug("Issuing ESV API GET Request to: " + esvApiLink);
 
                 // The ESV developer key goes in the header of every request
                 Request esvRequest = new Request.Builder()
-                        .url(esvURL)
+                        .url(esvApiLink)
                         .header("Authorization", "Token " + context.getBean("esvKey"))
                         .build();
 
@@ -131,7 +131,7 @@ public class Controller {
                     //body = "{\"query\":\"Genesis 1:1,John 1:1\",\"canonical\":\"Genesis 1:1; John 1:1\",\"parsed\":[[1001001,1001001],[43001001,43001001]],\"passage_meta\":[{\"canonical\":\"Genesis 1:1\",\"chapter_start\":[1001001,1001031],\"chapter_end\":[1001001,1001031],\"prev_verse\":null,\"next_verse\":1001002,\"prev_chapter\":null,\"next_chapter\":[1002001,1002025]},{\"canonical\":\"John 1:1\",\"chapter_start\":[43001001,43001051],\"chapter_end\":[43001001,43001051],\"prev_verse\":42024053,\"next_verse\":43001002,\"prev_chapter\":[42024001,42024053],\"next_chapter\":[43002001,43002025]}],\"passages\":[\"\\nGenesis 1:1\\n\\n\\nThe Creation of the World\\n\\n  [1] In the beginning, God created the heavens and the earth. (ESV)\",\"\\nJohn 1:1\\n\\n\\nThe Word Became Flesh\\n\\n  [1] In the beginning was the Word, and the Word was with God, and the Word was God. (ESV)\"]}";
                     body = esvResponse.body().string();
                     if (esvResponse.isSuccessful()) {
-                        Query esvQuery = gson.fromJson(body, Query.class);
+                        Query esvQuery = objectMapper.readValue(body, Query.class);
 
                         String passagesText = "";
                         for (String passage : esvQuery.getPassages()) {
@@ -141,14 +141,13 @@ public class Controller {
                                 .setColor("good")
                                 .setFallback(esvQuery.getCanonical() + " | " + passagesText)
                                 .setText(passagesText)
-                                // TODO: Fix this hard-coded monstrosity.
-                                .setFooter("https://www.esv.org/" +
-                                        URLEncoder.encode(esvQuery.getCanonical(), "UTF-8") + "/");
+                                .setFooter(context.getBean("esvWebLink", String.class) +
+                                        URLEncoder.encode(esvQuery.getCanonical(), "UTF-8"));
 
                         slackResponse = AttachmentResponse.createPublic(attachment);
 
                     } else {
-                        Error esvMessage = gson.fromJson(body, Error.class);
+                        Error esvMessage = objectMapper.readValue(body, Error.class);
                         logger.error(esvResponse.toString());
 
                         // Do not just pass the error along to Slack. We have no control over what it is, and
@@ -157,9 +156,6 @@ public class Controller {
                         throw new Exception("Error with api.esv.org exchange. Please check server logs for details.");
                     }
                 }
-
-
-
             } catch (NoSuchBeanDefinitionException e) {
                 slackResponse = TextResponse.createPrivate("Error with SlackESV configuration");
             } catch (Exception e) {
@@ -168,18 +164,25 @@ public class Controller {
 
             // Send the response back to Slack
             // https://api.slack.com/methods/chat.postMessage
-            logger.debug("Posting to Slack: " + gson.toJson(slackResponse).toString());
-            RequestBody slackBody = RequestBody.create(JSON, gson.toJson(slackResponse));
-            Request slackRequest = new Request.Builder()
-                    .url(responseUrl)
-                    .post(slackBody)
-                    .build();
-            try (okhttp3.Response response = client.newCall(slackRequest).execute()) {
-                logger.debug(response.toString());
-                if (!response.isSuccessful()) {
-                    logger.error("Error posting back to slack: " + response.message());
+            String slackResponseJson;
+            try {
+                slackResponseJson = objectMapper.writeValueAsString(slackResponse);
+
+                logger.debug("Posting to Slack: " + slackResponseJson);
+                RequestBody slackBody = RequestBody.create(JSON, slackResponseJson);
+                Request slackRequest = new Request.Builder()
+                        .url(responseUrl)
+                        .post(slackBody)
+                        .build();
+                try (okhttp3.Response response = client.newCall(slackRequest).execute()) {
+                    logger.debug(response.toString());
+                    if (!response.isSuccessful()) {
+                        logger.error("Error posting back to slack: " + response.message());
+                    }
+                } catch (IOException e) {
+                    logger.error(e.toString());
                 }
-            } catch (IOException e) {
+            } catch (JsonProcessingException e) {
                 logger.error(e.toString());
             }
 

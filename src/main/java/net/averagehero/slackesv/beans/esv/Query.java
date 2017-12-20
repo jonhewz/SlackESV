@@ -1,6 +1,6 @@
 package net.averagehero.slackesv.beans.esv;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /* Example response JSON from ESV:
@@ -27,14 +27,9 @@ import java.util.List;
 public class Query {
 
     private String query;
-
     private String canonical;
-
     private List<List<Integer>> parsed = null;
-
-    @SerializedName("passage_meta")
     private List<PassageMetum> passageMeta = null;
-
     private List<String> passages = null;
 
     public String getQuery() {
@@ -61,6 +56,7 @@ public class Query {
         this.parsed = parsed;
     }
 
+    @JsonProperty("passage_meta")
     public List<PassageMetum> getPassageMeta() {
         return passageMeta;
     }

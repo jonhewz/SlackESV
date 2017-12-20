@@ -1,6 +1,6 @@
 package net.averagehero.slackesv.beans.esv;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -53,25 +53,14 @@ import java.util.List;
 public class PassageMetum {
 
     private String canonical;
-
-    @SerializedName("chapter_start")
     private List<Integer> chapterStart = null;
-
-    @SerializedName("chapter_end")
     private List<Integer> chapterEnd = null;
-
-    @SerializedName("prev_verse")
     private Integer prevVerse;
-
-    @SerializedName("next_verse")
     private Integer nextVerse;
-
-    @SerializedName("prev_chapter")
     private List<Integer> prevChapter = null;
-
-    @SerializedName("next_chapter")
     private List<Integer> nextChapter = null;
 
+    @JsonProperty("canonical")
     public String getCanonical() {
         return canonical;
     }
@@ -80,6 +69,7 @@ public class PassageMetum {
         this.canonical = canonical;
     }
 
+    @JsonProperty("chapter_start")
     public List<Integer> getChapterStart() {
         return chapterStart;
     }
@@ -88,6 +78,7 @@ public class PassageMetum {
         this.chapterStart = chapterStart;
     }
 
+    @JsonProperty("chapter_end")
     public List<Integer> getChapterEnd() {
         return chapterEnd;
     }
@@ -96,6 +87,7 @@ public class PassageMetum {
         this.chapterEnd = chapterEnd;
     }
 
+    @JsonProperty("prev_verse")
     public Integer getPrevVerse() {
         return prevVerse;
     }
@@ -104,6 +96,7 @@ public class PassageMetum {
         this.prevVerse = prevVerse;
     }
 
+    @JsonProperty("next_verse")
     public Integer getNextVerse() {
         return nextVerse;
     }
@@ -112,6 +105,7 @@ public class PassageMetum {
         this.nextVerse = nextVerse;
     }
 
+    @JsonProperty("prev_chapter")
     public List<Integer> getPrevChapter() {
         return prevChapter;
     }
@@ -120,6 +114,7 @@ public class PassageMetum {
         this.prevChapter = prevChapter;
     }
 
+    @JsonProperty("next_chapter")
     public List<Integer> getNextChapter() {
         return nextChapter;
     }

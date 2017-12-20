@@ -1,6 +1,6 @@
 package net.averagehero.slackesv.beans.slack;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Example JSON for an empty response.
@@ -10,7 +10,6 @@ public class SlackResponse {
     protected static String PRIVATE = "ephemeral";
     protected static String PUBLIC = "in_channel";
 
-    @SerializedName("response_type")
     private final String responseType;
 
     private SlackResponse() {
@@ -29,6 +28,7 @@ public class SlackResponse {
         return new SlackResponse(PRIVATE);
     }
 
+    @JsonProperty("response_type")
     public String getResponseType() {
         return responseType;
     }
