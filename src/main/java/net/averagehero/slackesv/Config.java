@@ -66,7 +66,7 @@ public class Config {
         return esvApiLink;
     }
 
-    @Value("https://esvbible.org/")
+    @Value("https://www.esv.org/")
     private String esvWebLink;
 
     @Bean(name="esvWebLink")
